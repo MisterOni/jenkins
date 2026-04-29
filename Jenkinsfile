@@ -1,62 +1,35 @@
-// CODE_CHANGES = getGitChanges()
-def gv
 pipeline {
     agent any
-
-    parameters {
-        choice(name: 'VERSION', choices: ['1.1.0', '1.2.0', '1.3.0'], description: '')
-        booleanParam(name: 'executeTests', defaultValue: true, description: '')
-    }
+    tools {
+        maven 'maven-3.9'
+}
     stages {
-        stage("init") {
+        stage('build jar') {
             steps {
                 script {
-                    gv = load "script.groovy"
-            }
-
-        } }
-
-        stage("build") {
-            /* when {
-                expression {
-                    BRANCH_NAME == 'dev' && CODE_CHANGES == true
+                    echo "building the application..."
+                    sh 'mvn package'
                 }
-            } */
-            steps {
-                script {
-                    gv.buildApp()
-                }
-
             }
-
         }
-
-        stage("test") {
-            when {
-                expression {
-                    params.executeTests
-                }
-            }
+        stage('build image') {
             steps {
                 script {
-                    gv.testApp()
+                    echo "building the docker image..."
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh 'docker build -t misteronii/demo-app:jma-2.0'
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                        sh 'docker push misteronii/demo-app:jma-2.0'
+                    }
                 }
-
             }
-
         }
-
-        stage("deploy") {
+        stage('deploy') {
             steps {
                 script {
-                    env.ENV = input message: "Select the environment to deploy to", ok:"Done", parameters: [choice(name: 'ENV', choices: ['dev', 'staging', 'prod'], description: '')]
-                    gv.deploy()
-                    echo "Deploying to ${ENV}"
+                    echo "deploying the application..."
                 }
-
             }
-
         }
-
     }
 }
