@@ -29,7 +29,7 @@ pipeline {
 
             steps {
                 script {
-                    buildImage()
+                    buildImage 'misteronii/demo-app:jma-3.0'
                 }
             }
         }
